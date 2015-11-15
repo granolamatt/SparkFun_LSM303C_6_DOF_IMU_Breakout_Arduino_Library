@@ -2,7 +2,7 @@
 #ifndef __SPARKFUN_LSM303C_H__
 #define __SPARKFUN_LSM303C_H__
 
-#include "Wire.h"
+//#include "Wire.h"
 #include "SparkFunIMU.h"
 #include "LSM303CTypes.h"
 #include "DebugMacros.h"
@@ -36,6 +36,10 @@ static const char MERROR[] = "\nMag Error";
 
 class LSM303C : public SparkFunIMU
 {
+  private:
+    int file;
+    void enableIMU();
+    status_t selectDevice(int file, int addr);
   public:
     // These are the only methods are the only methods the user can use w/o mods
     ~LSM303C()  =  default;
@@ -62,8 +66,6 @@ class LSM303C : public SparkFunIMU
     InterfaceMode_t interfaceMode = MODE_I2C;  // Set a default...
 
     // Hardware abstraction functions (Pro Mini)
-    uint8_t  SPI_ReadByte(CHIP_t, uint8_t);
-    status_t SPI_WriteByte(CHIP_t, uint8_t, uint8_t);
     uint8_t  I2C_ByteWrite(I2C_ADDR_t, uint8_t, uint8_t);  
     status_t I2C_ByteRead(I2C_ADDR_t, uint8_t, uint8_t&);
 

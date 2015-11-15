@@ -4,7 +4,8 @@
 #ifndef __SPARKFUNIMU_H__
 #define __SPARKFUNIMU_H__
 
-#include "Arduino.h"
+#define NAN (0x7fff)
+// #include "Arduino.h"
 
 // Return values 
 typedef enum

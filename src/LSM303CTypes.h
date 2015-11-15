@@ -3,6 +3,8 @@
 #ifndef __LSM303C_TYPES_H__
 #define __LSM303C_TYPES_H__
 
+#include <stdint.h>
+
 ////////////////////////////////////
 // LSM303C Magnetometer Registers //
 ////////////////////////////////////

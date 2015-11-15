@@ -1,10 +1,17 @@
 #include "SparkFunLSM303C.h"
-#include "stdint.h"
+#include "i2c-dev.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
 
 // Public methods
 status_t LSM303C::begin()
 {
-  debug_println(EMPTY);
+  printf("\n");
   return
   begin(// Default to I2C bus
         MODE_I2C,
@@ -31,6 +38,29 @@ status_t LSM303C::begin()
         );
 }
 
+void LSM303C::enableIMU()
+{
+
+
+        int res, bus,  size;
+
+        char filename[20];
+        sprintf(filename, "/dev/i2c-%d", 1);
+        file = open(filename, O_RDWR);
+        if (file<0) {
+		       printf("Unable to open I2C bus!");
+           _exit(1);
+        }
+
+ // Enable accelerometer.
+	//writeAccReg(LSM303_CTRL_REG1_A, 0b01010111); //  z,y,x axis enabled , 100Hz data rate
+	//writeAccReg(LSM303_CTRL_REG4_A, 0b00101000); // +/- 8G full scale: FS = 10 on DLHC, high resolution output mode
+
+ // Enable magnetometer
+  //      writeMagReg(LSM303_MR_REG_M, 0x00);  // enable magnometer
+
+}
+
 status_t LSM303C::begin(InterfaceMode_t im, MAG_DO_t modr, MAG_FS_t mfs,
     MAG_BDU_t mbu, MAG_OMXY_t mxyodr, MAG_OMZ_t mzodr, MAG_MD_t mm,
     ACC_FS_t afs, ACC_BDU_t abu, uint8_t aea, ACC_ODR_t aodr)
@@ -38,24 +68,8 @@ status_t LSM303C::begin(InterfaceMode_t im, MAG_DO_t modr, MAG_FS_t mfs,
   uint8_t successes = 0;
   // Select I2C or SPI
   interfaceMode = im;
-
-  if (interfaceMode == MODE_SPI)
-  {
-    debug_println("Setting up SPI");
-    // Setup pins for SPI
-    // CS & CLK must be outputs DDRxn = 1
-    bitSet(DIR_REG, CSBIT_MAG);
-    bitSet(DIR_REG, CSBIT_XL);
-    bitSet(DIR_REG, CLKBIT);
-    // Deselect SPI chips
-    bitSet(CSPORT_MAG, CSBIT_MAG);
-    bitSet(CSPORT_XL, CSBIT_XL);
-    // Clock polarity (CPOL) = 1
-    bitSet(CLKPORT, CLKBIT);
-    // SPI Serial Interface Mode (SIM) bits must be set
-    SPI_WriteByte(ACC, ACC_CTRL4, 0b111);
-    SPI_WriteByte(MAG, MAG_CTRL_REG3, _BV(2));
-  }
+  enableIMU();
+  
   ////////// Initialize Magnetometer //////////
   // Initialize magnetometer output data rate
   successes += MAG_SetODR(modr);
@@ -105,7 +119,7 @@ float LSM303C::readAccelX()
   
   if (response != IMU_SUCCESS)
   {
-    debug_println(AERROR);
+    printf("AERROR\n");
     return NAN;
   }
   
@@ -127,14 +141,14 @@ float LSM303C::readAccelX()
 	    return IMU_HW_ERROR;
     }
   
-    debug_println("Fresh raw data");
+    // printf("Fresh raw data\n");
 
     //convert from LSB to mg
     return int16_t(( (valueH << 8) | valueL )) * SENSITIVITY_ACC;
   }
 
   // Should never get here
-  debug_println("Returning NAN");
+  printf("Returning NAN\n");
   return NAN;
 }
 
@@ -145,7 +159,7 @@ float LSM303C::readAccelY()
   
   if (response != IMU_SUCCESS)
   {
-    debug_println(AERROR);
+    printf("AERROR\n");
     return NAN;
   }
   
@@ -167,14 +181,14 @@ float LSM303C::readAccelY()
 	    return IMU_HW_ERROR;
     }
   
-    debug_println("Fresh raw data");
+    // printf("Fresh raw data\n");
 
     //convert from LSB to mg
     return int16_t(( (valueH << 8) | valueL )) * SENSITIVITY_ACC;
   }
 
   // Should never get here
-  debug_println("Returning NAN");
+  printf("Returning NAN\n");
   return NAN;
 }
 
@@ -185,7 +199,7 @@ float LSM303C::readAccelZ()
   
   if (response != IMU_SUCCESS)
   {
-    debug_println(AERROR);
+    printf("AERROR\n");
     return NAN;
   }
   
@@ -207,14 +221,14 @@ float LSM303C::readAccelZ()
 	    return IMU_HW_ERROR;
     }
   
-    debug_println("Fresh raw data");
+    // printf("Fresh raw data\n");
 
     //convert from LSB to mg
     return(int16_t(( (valueH << 8) | valueL )) * SENSITIVITY_ACC);
   }
 
   // Should never get here
-  debug_println("Returning NAN");
+  printf("Returning NAN\n");
   return NAN;
 }
 
@@ -265,7 +279,7 @@ float LSM303C::readAccel(AXIS_t dir)
   
   if (response != IMU_SUCCESS)
   {
-    debug_println(AERROR);
+    printf("AERROR\n");
     return NAN;
   }
   
@@ -275,7 +289,7 @@ float LSM303C::readAccel(AXIS_t dir)
   if (flag_ACC_STATUS_FLAGS & ACC_ZYX_NEW_DATA_AVAILABLE)
   {
     response = ACC_GetAccRaw(accelData);
-    debug_println("Fresh raw data");
+    // printf("Fresh raw data\n");
   }
   //convert from LSB to mg
   switch (dir)
@@ -294,7 +308,7 @@ float LSM303C::readAccel(AXIS_t dir)
   }
 
   // Should never get here
-  debug_println("Returning NAN");
+  printf("Returning NAN\n");
   return NAN;
 }
 
@@ -305,7 +319,7 @@ float LSM303C::readMag(AXIS_t dir)
   
   if (response != IMU_SUCCESS)
   {
-    debug_println(MERROR);
+    printf("MERROR\n");
     return NAN;
   }
   
@@ -313,7 +327,7 @@ float LSM303C::readMag(AXIS_t dir)
   if (flag_MAG_XYZDA & MAG_XYZDA_YES)
   {
     response = MAG_GetMagRaw(magData);
-    debug_println("Fresh raw data");
+    // printf("Fresh raw data\n");
   }
   //convert from LSB to Gauss
   switch (dir)
@@ -332,17 +346,17 @@ float LSM303C::readMag(AXIS_t dir)
   }
 
   // Should never get here
-  debug_println("Returning NAN");
+  printf("Returning NAN\n");
   return NAN;
 }
 
 status_t LSM303C::MAG_GetMagRaw(AxesRaw_t& buff)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t valueL;
   uint8_t valueH;
   
-  debug_println("& was false");
+  // printf("& was false\n");
   if( MAG_ReadReg(MAG_OUTX_L, valueL) )
   {
     return IMU_HW_ERROR;
@@ -385,12 +399,12 @@ status_t LSM303C::MAG_GetMagRaw(AxesRaw_t& buff)
 // Methods required to get device up and running
 status_t LSM303C::MAG_SetODR(MAG_DO_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if(MAG_ReadReg(MAG_CTRL_REG1, value))
   {
-    debug_printlns("Failed Read from MAG_CTRL_REG1");
+    printf("Failed Read from MAG_CTRL_REG1\n");
     return IMU_HW_ERROR;
   }
 
@@ -408,7 +422,7 @@ status_t LSM303C::MAG_SetODR(MAG_DO_t val)
 
 status_t LSM303C::MAG_SetFullScale(MAG_FS_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( MAG_ReadReg(MAG_CTRL_REG2, value) )
@@ -429,7 +443,7 @@ status_t LSM303C::MAG_SetFullScale(MAG_FS_t val)
 
 status_t LSM303C::MAG_BlockDataUpdate(MAG_BDU_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( MAG_ReadReg(MAG_CTRL_REG5, value) )
@@ -463,7 +477,7 @@ status_t LSM303C::MAG_XYZ_AxDataAvailable(MAG_XYZDA_t& value)
 
 status_t LSM303C::MAG_XY_AxOperativeMode(MAG_OMXY_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
 
   uint8_t value;
 
@@ -485,7 +499,7 @@ status_t LSM303C::MAG_XY_AxOperativeMode(MAG_OMXY_t val)
 
 status_t LSM303C::MAG_Z_AxOperativeMode(MAG_OMZ_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( MAG_ReadReg(MAG_CTRL_REG4, value) )
@@ -506,13 +520,13 @@ status_t LSM303C::MAG_Z_AxOperativeMode(MAG_OMZ_t val)
 
 status_t LSM303C::MAG_SetMode(MAG_MD_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( MAG_ReadReg(MAG_CTRL_REG3, value) )
   {
-    debug_print("Failed to read MAG_CTRL_REG3. 'Read': 0x");
-    debug_printlns(value, HEX);
+    printf("Failed to read MAG_CTRL_REG3. 'Read': 0x");
+    printf("0x%d\n",value);
     return IMU_HW_ERROR;
   }
 
@@ -529,12 +543,12 @@ status_t LSM303C::MAG_SetMode(MAG_MD_t val)
 
 status_t LSM303C::ACC_SetFullScale(ACC_FS_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( ACC_ReadReg(ACC_CTRL4, value) )
   {
-    debug_printlns("Failed ACC read");
+    printf("Failed ACC read\n");
     return IMU_HW_ERROR;
   }
 
@@ -552,7 +566,7 @@ status_t LSM303C::ACC_SetFullScale(ACC_FS_t val)
 
 status_t LSM303C::ACC_BlockDataUpdate(ACC_BDU_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( ACC_ReadReg(ACC_CTRL1, value) )
@@ -573,12 +587,12 @@ status_t LSM303C::ACC_BlockDataUpdate(ACC_BDU_t val)
 
 status_t LSM303C::ACC_EnableAxis(uint8_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( ACC_ReadReg(ACC_CTRL1, value) )
   {
-    debug_println(AERROR);
+    printf("AERROR\n");
     return IMU_HW_ERROR;
   }
 
@@ -595,7 +609,7 @@ status_t LSM303C::ACC_EnableAxis(uint8_t val)
 
 status_t LSM303C::ACC_SetODR(ACC_ODR_t val)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t value;
 
   if ( ACC_ReadReg(ACC_CTRL1, value) )
@@ -633,20 +647,31 @@ status_t LSM303C::MAG_TemperatureEN(MAG_TEMP_EN_t val){
   return IMU_SUCCESS;
 }
 
+status_t LSM303C::selectDevice(int file, int addr)
+{
+        char device[3];
+        if (addr == 1)
+                device == "L3G";
+        else
+                device == "LSM";
+
+
+        if (ioctl(file, I2C_SLAVE, addr) < 0) {
+          return IMU_HW_ERROR;
+        }
+        
+        return IMU_SUCCESS;
+}
+
 status_t LSM303C::MAG_ReadReg(MAG_REG_t reg, uint8_t& data)
 {
-  debug_print("Reading register 0x");
-  debug_printlns(reg, HEX);
+  // printf("Reading register 0x");
+  // printf("0x%d\n", reg);
   status_t ret = IMU_GENERIC_ERROR;
     
   if (interfaceMode == MODE_I2C)
   {
     ret = I2C_ByteRead(MAG_I2C_ADDR, reg, data);
-  }
-  else if (interfaceMode == MODE_SPI)
-  {
-    data = SPI_ReadByte(MAG, reg);
-    ret = IMU_SUCCESS;
   }
   else
   {
@@ -658,16 +683,12 @@ status_t LSM303C::MAG_ReadReg(MAG_REG_t reg, uint8_t& data)
 
 uint8_t  LSM303C::MAG_WriteReg(MAG_REG_t reg, uint8_t data)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t ret;
     
   if (interfaceMode == MODE_I2C)
   {
     ret = I2C_ByteWrite(MAG_I2C_ADDR, reg, data);
-  }
-  else if (interfaceMode == MODE_SPI)
-  {
-    ret = SPI_WriteByte(MAG, reg, data);
   }
   else
   {
@@ -679,18 +700,13 @@ uint8_t  LSM303C::MAG_WriteReg(MAG_REG_t reg, uint8_t data)
 
 status_t LSM303C::ACC_ReadReg(ACC_REG_t reg, uint8_t& data)
 {
-  debug_print("Reading address 0x");
-  debug_printlns(reg, HEX);
+  // printf("Reading address 0x");
+  // printf("0x%d\n", reg);
   status_t ret;
     
   if (interfaceMode == MODE_I2C)
   {
     ret = I2C_ByteRead(ACC_I2C_ADDR, reg, data);
-  }
-  else if (interfaceMode == MODE_SPI)
-  {
-    data = SPI_ReadByte(ACC, reg);
-    ret = IMU_SUCCESS;
   }
   else
   {
@@ -706,16 +722,12 @@ status_t LSM303C::ACC_ReadReg(ACC_REG_t reg, uint8_t& data)
 
 uint8_t  LSM303C::ACC_WriteReg(ACC_REG_t reg, uint8_t data)
 {
-  debug_print(EMPTY);
+  // printf("EMPTY\n");
   uint8_t ret;
     
   if (interfaceMode == MODE_I2C)
   {
     ret = I2C_ByteWrite(ACC_I2C_ADDR, reg, data);
-  }
-  else if (interfaceMode == MODE_SPI)
-  {
-    ret = SPI_WriteByte(ACC, reg, data);
   }
   else
   {
@@ -725,186 +737,24 @@ uint8_t  LSM303C::ACC_WriteReg(ACC_REG_t reg, uint8_t data)
   return ret;
 }
 
-// This function uses bit manibulation for higher speed & smaller code
-uint8_t LSM303C::SPI_ReadByte(CHIP_t chip, uint8_t data)
-{
-  debug_print("Reading register 0x");
-  debug_printlns(data, HEX);
-  uint8_t counter;
-
-  // Set the read/write bit (bit 7) to do a read
-  data |= _BV(7);
-
-  // Set data pin to output
-  bitSet(DIR_REG, DATABIT);
- 
-  noInterrupts();
-
-  // Select the chip & deselect the other
-  switch (chip)
-  {
-  case MAG:
-    bitClear(CSPORT_MAG, CSBIT_MAG);
-    bitSet(CSPORT_XL, CSBIT_XL);
-    break;
-  case ACC:
-    bitClear(CSPORT_XL, CSBIT_XL);
-    bitSet(CSPORT_MAG, CSBIT_MAG);
-    break;
-  }
-
-  // Shift out 8-bit address
-  for(counter = 8; counter; counter--)
-  {
-    bitWrite(DATAPORTO, DATABIT, data & 0x80);
-    // Data is setup, so drop clock edge
-    bitClear(CLKPORT, CLKBIT);
-    bitSet(CLKPORT, CLKBIT);
-    // Shift off sent bit
-    data <<= 1;
-  }
-  
-  // Switch data pin to input (0 = INPUT)
-  bitClear(DIR_REG, DATABIT);
-
-  // Shift in register data from address
-  for(counter = 8; counter; counter--)
-  {
-    // Shift data to the left.  Remains 0 after first shift
-    data <<= 1;
-
-    bitClear(CLKPORT, CLKBIT);
-    // Sample on rising egde
-    bitSet(CLKPORT, CLKBIT);
-    if (bitRead(DATAPORTI, DATABIT))
-    {
-      data |= 0x01;
-    }
-  }
-
-  // Unselect chip
-  switch (chip)
-  {
-  case MAG:
-    bitSet(CSPORT_MAG, CSBIT_MAG);
-    break;
-  case ACC:
-    bitSet(CSPORT_XL, CSBIT_XL);
-    break;
-  }
-
-  interrupts();
-
-  return(data);
-}
-
-
-
-
-
-// This function uses bit manibulation for higher speed & smaller code
-status_t LSM303C::SPI_WriteByte(CHIP_t chip, uint8_t reg, uint8_t data)
-{
-  debug_print("Writing 0x");
-  debug_prints(data, HEX);
-  debug_prints(" to register 0x");
-  debug_printlns(reg, HEX);
-
-  uint8_t counter;
-  uint16_t twoBytes;
-
-  // Clear the read/write bit (bit 7) to do a write
-  reg &= ~_BV(7);
-  twoBytes = reg << 8 | data;
-
-  // Set data pin to output
-  bitSet(DIR_REG, DATABIT);
- 
-  noInterrupts();
-
-  // Select the chip & deselect the other
-  switch (chip)
-  {
-  case MAG:
-    bitClear(CSPORT_MAG, CSBIT_MAG);
-    bitSet(CSPORT_XL, CSBIT_XL);
-    break;
-  case ACC:
-    bitClear(CSPORT_XL, CSBIT_XL);
-    bitSet(CSPORT_MAG, CSBIT_MAG);
-    break;
-  }
-
-  // Shift out 8-bit address & 8-bit data
-  for(counter = 16; counter; counter--)
-  {
-    bitWrite(DATAPORTO, DATABIT, twoBytes & 0x8000);
-    
-    // Data is setup, so drop clock edge
-    bitClear(CLKPORT, CLKBIT);
-    bitSet(CLKPORT, CLKBIT);
-    // Shift off sent bit
-    twoBytes <<= 1;
-  }
-  
-  // Unselect chip
-  switch (chip)
-  {
-  case MAG:
-    bitSet(CSPORT_MAG, CSBIT_MAG);
-    break;
-  case ACC:
-    bitSet(CSPORT_XL, CSBIT_XL);
-    break;
-  }
- 
-  interrupts();
-
-  // Set data pin to input
-  bitClear(DIR_REG, DATABIT);
-
-  // Is there a way to verify true success?
-  return IMU_SUCCESS;
-}
-
-
-
-
 uint8_t  LSM303C::I2C_ByteWrite(I2C_ADDR_t slaveAddress, uint8_t reg,
     uint8_t data)
 {
   uint8_t ret = IMU_GENERIC_ERROR;
-  Wire.beginTransmission(slaveAddress);  // Initialize the Tx buffer
-  // returns num bytes written
-  if (Wire.write(reg))
+  
+  ret = selectDevice(file, slaveAddress);
+  if (ret != IMU_SUCCESS) {
+    return ret;
+  }
+  int result = i2c_smbus_write_byte_data(file, reg, data);
+  if (result == -1)
   {
-    ret = Wire.write(data);
-    if (ret)
-    {
-      debug_print("Wrote: 0x");
-      debug_printlns(data, HEX);
-      switch (Wire.endTransmission())
-      {
-      case 0:
-        ret = IMU_SUCCESS;
-        break;
-      case 1: // Data too long to fit in transmit buffer
-      case 2: // Received NACK on transmit of address
-      case 3: // Received NACK on transmit of data
-      case 4: // Other Error
-      default:
-        ret = IMU_HW_ERROR;
-      }
-    }
-    else
-    {
+      printf ("Failed to write byte to I2C Acc.");
       ret = IMU_HW_ERROR;
-    }
+  } else {
+    ret = IMU_SUCCESS;
   }
-  else
-  {
-    ret = IMU_HW_ERROR;
-  }
+  
   return ret;
 }
 
@@ -912,49 +762,113 @@ status_t LSM303C::I2C_ByteRead(I2C_ADDR_t slaveAddress, uint8_t reg,
     uint8_t& data)
 {
   status_t ret = IMU_GENERIC_ERROR;
-  debug_print("Reading from I2C address: 0x");
-  debug_prints(slaveAddress, HEX);
-  debug_prints(", register 0x");
-  debug_printlns(reg, HEX);
-  Wire.beginTransmission(slaveAddress); // Initialize the Tx buffer
-  if (Wire.write(reg))  // Put slave register address in Tx buff
-  {
-    if (Wire.endTransmission(false))  // Send Tx, send restart to keep alive
-    {
-      debug_println("Error: I2C buffer didn't get sent!");
-      debug_print("Slave address: 0x");
-      debug_printlns(slaveAddress, HEX);
-      debug_print("Register: 0x");
-      debug_printlns(reg, HEX);
-
-      ret = IMU_HW_ERROR;
-    }
-    else if (Wire.requestFrom(slaveAddress, 1))
-    {
-      data = Wire.read();
-      debug_print("Read: 0x");
-      debug_printlns(data, HEX);
-      ret = IMU_SUCCESS;
-    }
-    else
-    {
-      debug_println("IMU_HW_ERROR");
-      ret = IMU_HW_ERROR;
-    }
+  // printf("Reading from I2C address: 0x");
+  // printf("%x\n", slaveAddress);
+  // printf(", register 0x");
+  // printf("%x\n", reg);
+  
+  ret = selectDevice(file,slaveAddress);
+  
+  if (ret != IMU_SUCCESS) {
+    return ret;
   }
-  else
+  
+  int result = i2c_smbus_read_i2c_block_data(file, reg, 1, &data);
+  if (result != 1)
   {
-    debug_println("Error: couldn't send slave register address");
+      printf("Failed to read block from I2C.");
+      ret = IMU_HW_ERROR;
+  } else {
+    ret = IMU_SUCCESS;
   }
   return ret;
 }
 
+// uint8_t  LSM303C::I2C_ByteWrite(I2C_ADDR_t slaveAddress, uint8_t reg,
+//     uint8_t data)
+// {
+//   uint8_t ret = IMU_GENERIC_ERROR;
+//   Wire.beginTransmission(slaveAddress);  // Initialize the Tx buffer
+//   // returns num bytes written
+//   if (Wire.write(reg))
+//   {
+//     ret = Wire.write(data);
+//     if (ret)
+//     {
+//       printf("Wrote: 0x");
+//       printf("%x\n", data);
+//       switch (Wire.endTransmission())
+//       {
+//       case 0:
+//         ret = IMU_SUCCESS;
+//         break;
+//       case 1: // Data too long to fit in transmit buffer
+//       case 2: // Received NACK on transmit of address
+//       case 3: // Received NACK on transmit of data
+//       case 4: // Other Error
+//       default:
+//         ret = IMU_HW_ERROR;
+//       }
+//     }
+//     else
+//     {
+//       ret = IMU_HW_ERROR;
+//     }
+//   }
+//   else
+//   {
+//     ret = IMU_HW_ERROR;
+//   }
+//   return ret;
+// }
+
+// status_t LSM303C::I2C_ByteRead(I2C_ADDR_t slaveAddress, uint8_t reg,
+//     uint8_t& data)
+// {
+//   status_t ret = IMU_GENERIC_ERROR;
+//   printf("Reading from I2C address: 0x");
+//   printf("%x\n", slaveAddress);
+//   printf(", register 0x");
+//   printf("%x\n", reg);
+//   Wire.beginTransmission(slaveAddress); // Initialize the Tx buffer
+//   if (Wire.write(reg))  // Put slave register address in Tx buff
+//   {
+//     if (Wire.endTransmission(false))  // Send Tx, send restart to keep alive
+//     {
+//       printf("Error: I2C buffer didn't get sent!\n");
+//       printf("Slave address: 0x");
+//       printf("%x\n", slaveAddress);
+//       printf("Register: 0x");
+//       printf("%x\n", reg);
+
+//       ret = IMU_HW_ERROR;
+//     }
+//     else if (Wire.requestFrom(slaveAddress, 1))
+//     {
+//       data = Wire.read();
+//       printf("Read: 0x");
+//       printf("%x\n", data);
+//       ret = IMU_SUCCESS;
+//     }
+//     else
+//     {
+//       printf("IMU_HW_ERROR\n");
+//       ret = IMU_HW_ERROR;
+//     }
+//   }
+//   else
+//   {
+//     printf("Error: couldn't send slave register address\n");
+//   }
+//   return ret;
+// }
+
 status_t LSM303C::ACC_Status_Flags(uint8_t& val)
 {
-  debug_println("Getting accel status");
+  // printf("Getting accel status\n");
   if( ACC_ReadReg(ACC_STATUS, val) )
   {
-    debug_println(AERROR);
+    printf("AERROR\n");
     return IMU_HW_ERROR;
   }
 
@@ -1003,4 +917,70 @@ status_t LSM303C::ACC_GetAccRaw(AxesRaw_t& buff)
   buff.zAxis = (int16_t)( (valueH << 8) | valueL ); 
 
   return IMU_SUCCESS;
+}
+
+int mymillis()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return (tv.tv_sec) * 1000 + (tv.tv_usec)/1000;
+}
+
+int main(int argc, char *argv[])
+{
+  LSM303C myIMU;
+  struct  timeval tvBegin, tvEnd,tvDiff;
+  int startInt  = mymillis();
+  printf("This is my main\n");
+    if (myIMU.begin() != IMU_SUCCESS)
+  {
+    printf("Failed setup.\n");
+    _exit(1);
+  }
+  
+  gettimeofday(&tvBegin, NULL);
+  
+  while(1) {
+  startInt = mymillis();
+    //Get all parameters
+  printf("\nAccelerometer:\n");
+  printf(" X = ");
+  printf("%f\n",myIMU.readAccelX());
+  printf(" Y = ");
+  printf("%f\n",myIMU.readAccelY());
+  printf(" Z = ");
+  printf("%f\n",myIMU.readAccelZ());
+
+  // Not supported by hardware, so will return NAN
+  printf("\nGyroscope:\n");
+  printf(" X = ");
+  printf("%f",myIMU.readGyroX());
+  printf(" Y = ");
+  printf("%f",myIMU.readGyroY());
+  printf(" Z = ");
+  printf("%f",myIMU.readGyroZ());
+
+  printf("\nMagnetometer:\n");
+  printf(" X = ");
+  printf("%f",myIMU.readMagX());
+  printf(" Y = ");
+  printf("%f",myIMU.readMagY());
+  printf(" Z = ");
+  printf("%f",myIMU.readMagZ());
+
+  printf("\nThermometer:\n");
+  printf(" Degrees C = ");
+  printf("%f",myIMU.readTempC());
+  printf(" Degrees F = ");
+  printf("%f",myIMU.readTempF());
+  
+	//Each loop should be at least 20ms.
+        while(mymillis() - startInt < 200)
+        {
+            usleep(100);
+        }
+
+	printf("Loop Time %d\t", mymillis()- startInt);
+  }
+  
 }

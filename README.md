@@ -1,3 +1,5 @@
+I forked SparkFun's library for LSM303C and converted it to use I2C on the Raspberry PI.
+
 SparkFun LSM303C 6 DOF IMU Arduino Library
 ========================================
 
@@ -5,9 +7,11 @@ SparkFun LSM303C 6 DOF IMU Arduino Library
 
 [*LSM303C Breakout (BOB-13303)*](https://www.sparkfun.com/products/13303)
 
-This is an arduino IDE library to control the LSM303C.  It can be configured to use I<sup>2</sup>C or half-duplex SPI.
+This is my fork of the arduino IDE library [Sparkfun LSM303C Library](https://github.com/sparkfun/SparkFun_LSM303C_6_DOF_IMU_Breakout_Arduino_Library)  to control the LSM303C using a Raspberry PI.  It only uses I2C at the moment.
 
-This has been tested with Arduino Pro Mini.
+The examples directory still contains examples for Arduino.  The example I use is in src under main.c.  To compile the code first load the libi2c-dev on the raspberry pi.  Do not forget to edit /boot/config.txt and load the modules.
+
+This is a link I followed to enable [I2C on the  Raspberry PI](http://ozzmaker.com/i2c/).  Then run the compile script and if all goes well you can run the main.  Thanks to SparkFun for providing the initial arduino library.
 
 Repository Contents
 -------------------
